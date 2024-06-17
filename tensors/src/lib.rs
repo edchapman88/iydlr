@@ -271,6 +271,22 @@ impl<E: Element> Add<E> for TensorImpl<E> {
     }
 }
 
+/// Adding to a scalar to a tensors together.
+impl<E: Element> Sub<E> for TensorImpl<E> {
+    type Output = Self;
+
+    fn sub(self, scalar: E) -> Self {
+        let data: Vec<E> = self
+            .data
+            .iter()
+            // TODO(mhauru) What's the consequence of cloning here? Does it affect performance?
+            .map(|a| a.clone() - scalar.clone())
+            .collect();
+        // TODO: Remove the unwrap, and return a Result instead
+        TensorImpl::from_vec(&self.shape(), &data).unwrap()
+    }
+}
+
 /// Multiplying tensor by a scalar.
 impl<E: Element> Mul<E> for TensorImpl<E> {
     type Output = Self;
@@ -607,10 +623,12 @@ impl<E: RealElement> Ln for TensorImpl<E> {
 
 impl<E: RealElement> RealTensor<E> for TensorImpl<E> {
     fn softmax(&self, dim: usize) -> Self {
-        let data_exp = self.clone().exp();
+        let t_small = E::from(f64::EPSILON);
+        let max = self.data.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap();
+        let data_exp = (self.clone() - max.clone()).exp();
         let data_sum = data_exp.dim_sum(vec![dim]);
 
-        let new_data = data_exp / data_sum;
+        let new_data = data_exp / (data_sum + t_small);
         TensorImpl {
             shape: self.shape.clone(),
             data: new_data.data,

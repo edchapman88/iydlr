@@ -62,7 +62,9 @@ impl MultiHeadAttention<Te, El, La> {
                     if k >= j {
                         mask[j * matrix_dim + k] = Node::<f64>::zero();
                     } else {
-                        mask[j * matrix_dim + k] = Node::<f64>::neg_inf()
+                        mask[j * matrix_dim + k] = Node::<f64>::from(-1e9);
+                        // TODO(mhauru) Deal with this properly.
+                        //mask[j * matrix_dim + k] = Node::<f64>::neg_inf();
                     }
                 }
             }
@@ -148,10 +150,11 @@ where
                 // softmax along the sequence length, TODO: check correct dim for softmax
                 // TODO: mask currently not working with shape
                 let att: T = if let Some(mask) = &self.mask {
-                    println!("Mask shape: {:?}", mask.shape());
                     // println!("Single element tensor: {:?}", single_batch_tensor.shape());
                     // element-wise multiplication on attention: (T x T)  x (T x T)
-                    let masked_att: T = mask.clone() * att.clone();
+                    println!("Mask shape: {:?}", mask.shape());
+                    println!("Attention shape: {:?}", att.shape());
+                    let masked_att: T = mask.clone() + att.clone();
                     println!("Masked att shape: {:?}", masked_att.shape());
                     masked_att
                 } else {
@@ -219,6 +222,7 @@ mod tests {
             embed_dim: 20,
             num_head: 4,
             seed: 0,
+            num_blocks: 1,
         }
     }
 

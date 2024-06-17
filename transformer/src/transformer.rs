@@ -7,11 +7,12 @@ use interfaces::deep_learning::{ActivationLayer, DLModule};
 use interfaces::deep_learning::{EmbeddingLayer, LinearLayer};
 use interfaces::tensors::{RealElement, RealTensor, Tensor};
 use neural_nets::embedding_table::EmbeddingTable;
+use neural_nets::norm_layer::NormLayer;
 use neural_nets::{act_layer::ActLayer, lin_layer::LinLayer, serial::Serial};
 use std::default::Default;
 use std::marker::PhantomData;
 
-pub struct Transformer<L, A, T, E, Al>
+pub struct Transformer<L, A, T, E, Al, N>
 where
     L: LinearLayer<T, E>,
     A: SelfAttention<T, E>,
@@ -19,14 +20,16 @@ where
     T: RealTensor<E>,
     E: RealElement,
     Al: ActivationLayer<T, E>,
+    N: LinearLayer<T, E>,
 {
     model: Serial<T, E>,
     _marker_l: std::marker::PhantomData<L>,
     _marker_a: std::marker::PhantomData<A>,
     _marker_al: std::marker::PhantomData<Al>,
+    _marker_n: std::marker::PhantomData<N>,
 }
 
-impl Transformer<La, Mal, Te, El, ActLayer<Te, El>> {
+impl Transformer<La, Mal, Te, El, ActLayer<Te, El>, NormLayer<Te, El>> {
     pub fn new(config: &Config) -> Self {
         let mut modules: Vec<
             Box<dyn DLModule<Te, El, DLModuleError = <Te as Tensor<El>>::TensorError>>,
@@ -52,17 +55,19 @@ impl Transformer<La, Mal, Te, El, ActLayer<Te, El>> {
             _marker_a: PhantomData,
             _marker_al: PhantomData,
             _marker_l: PhantomData,
+            _marker_n: PhantomData,
         }
     }
 }
 
-impl<T, E, L, A, Al> DLModule<T, E> for Transformer<L, A, T, E, Al>
+impl<T, E, L, A, Al, N> DLModule<T, E> for Transformer<L, A, T, E, Al, N>
 where
     L: LinearLayer<T, E>,
     A: SelfAttention<T, E>,
     T: RealTensor<E>,
     E: RealElement,
     Al: ActivationLayer<T, E>,
+    N: LinearLayer<T, E>,
 {
     type DLModuleError = <T as Tensor<E>>::TensorError;
 
@@ -85,11 +90,11 @@ mod tests {
     fn get_config() -> Config {
         Config {
             batch_size: 2,
-            seq_len: 7,
-            embed_dim: 20,
+            seq_len: 8,
+            embed_dim: 8,
             vocab_size: 12,
             num_head: 4,
-            num_blocks: 4,
+            num_blocks: 1,
             seed: 0,
         }
     }
@@ -111,7 +116,15 @@ mod tests {
         )
         .unwrap();
         let out = model.forward(&x).unwrap();
-        let expected_shape = vec![2, 7, 12];
+        let out_vec: Vec<_> = out.clone().into();
+        println!(
+            "{:?}",
+            out_vec
+                .into_iter()
+                .map(|node| node.val())
+                .collect::<Vec<_>>()
+        );
+        let expected_shape = vec![2, 8, 12];
         let actual_shape = out.shape();
         assert_eq!(actual_shape, expected_shape);
     }

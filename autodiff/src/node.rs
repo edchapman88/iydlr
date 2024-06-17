@@ -1,4 +1,5 @@
 use std::{
+    cmp::{PartialOrd, Ordering},
     cell::RefCell,
     fmt::Display,
     ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, Sub},
@@ -224,6 +225,12 @@ impl<T: RealElement + From<f64>> Sub<Node<T>> for Node<T> {
     fn sub(self, mut rhs: Node<T>) -> Self::Output {
         rhs = rhs * Node::from(-1.0);
         NodeContent::Sum(self.val() + rhs.val(), None, (self, rhs)).into()
+    }
+}
+
+impl<T: RealElement + From<f64>> PartialOrd<Node<T>> for Node<T> {
+    fn partial_cmp(&self, rhs: &Node<T>) -> Option<Ordering> {
+        return self.val().partial_cmp(&rhs.val());
     }
 }
 

@@ -49,17 +49,18 @@ impl BatchGenerator {
         for _ in 0..self.batch_size {
             let sample = self.sample();
             for (x_token, y_token) in zip(sample.input, sample.target) {
-                let mut one_hot_x: Vec<Node<f64>> = vec![Node::from(0.0); self.vocab_size];
+                // let mut one_hot_x: Vec<Node<f64>> = vec![Node::from(0.0); self.vocab_size];
                 let mut one_hot_y: Vec<Node<f64>> = vec![Node::from(0.0); self.vocab_size];
-                one_hot_x[x_token] = Node::from(1.0);
+                // one_hot_x[x_token] = Node::from(1.0);
                 one_hot_y[y_token] = Node::from(1.0);
-                x_tensor.extend(one_hot_x);
+                x_tensor.push(Node::from(x_token));
                 y_tensor.extend(one_hot_y);
             }
         }
 
         let x = TensorImpl::from_vec(
-            &vec![self.batch_size, self.chunk_len, self.vocab_size],
+            // &vec![self.batch_size, self.chunk_len, self.vocab_size],
+            &vec![self.batch_size, self.chunk_len, 1],
             &x_tensor,
         )
         .unwrap();
